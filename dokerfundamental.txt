@@ -1,0 +1,36 @@
+when we install docker it installs 3 things Docker Deamon, REST API, and Docker CLI.
+Docker Deamon is a background process that manages docker objects such as images, container, volume, and netowrk
+Dokcer REST API server is a interface that provides program can talk to deamon to provide instructions. We could also create our own tools using this REST API.
+Docker CLI is nothing its command line utility that we use to perform tasks on docker such as pull, push, run, stop, kill etc. It uses the REST API to interact with deamon.
+
+Docker CLI we can install on another host and can work from any remote host.
+docker -H=remote-docker-engine:2375  # the remote-docker-engine is the docker engine address where docker is installed and 2375 is the port
+docker -H=10.10.1.1:2375 run ngnix   # this will run ngnix on docker that is installed on gievn Ip
+
+
+How a container runs/works
+Namspace - PID (Process ID)
+
+System always starts with one process ID and when we create a container it will new subsystem in it and creates new PID from start. However this will create new PID in host system and two process cannot share same PID hence they are different with eachother.
+
+
+-------------------------------------------------------------------------------
+| PID:1                                                                       |
+|      PID:2                                                                  |
+|      PID:3                                                                  |
+|      PID:4           _______________________________________                |
+|                     |  Child System (COntainer)             |               |
+|      PID:5 ---------|   PID:1                               |               |
+|      PID:6 -------- |     PID:2                             |               |
+|                     |                                       |               |
+|                     |                                       |               |
+|                     |                                       |               |
+|                     |                                       |               |
+|                     |                                       |               |
+|                     |                                       |               |
+|                     |_______________________________________|               |                                         |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|-----------------------------------------------------------------------------|
+
