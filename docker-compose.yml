@@ -1,0 +1,106 @@
+redis:
+    image:redis
+db:
+    image:postgres:9.4
+vote:
+    image:voting-app
+    ports:
+        -5000:80
+    links:
+        -redis
+result:
+    image:result-app
+    ports:
+        -5001:80
+    links:
+        -db
+worker:
+    image:worker
+    links:
+        -redis
+        -db
+
+
+
+
+# Now lets see about version 2
+
+version: 2
+services:
+    redis:
+        image:redis
+    db:
+        image:postgres:9.4
+    vote:
+        image:voting-app
+        ports:
+            -5000:80
+        depends_on:
+            -redis
+    result:
+        image:result-app
+        ports:
+            -5001:80
+    worker:
+        image:worker
+
+        
+        
+        
+# Now lets see about version 3
+
+version: 3
+services:
+    redis:
+        image:redis
+    db:
+        image:postgres:9.4
+    vote:
+        image:voting-app
+        ports:
+            -5000:80
+        depends_on:
+            -redis
+    result:
+        image:result-app
+        ports:
+            -5001:80
+    worker:
+        image:worker
+
+
+
+# Now lets see about version 2 with networks
+
+version: 2
+services:
+    redis:
+        image:redis
+        network:
+            -back-end
+    db:
+        image:postgres:9.4
+        network:
+            -back-end
+    vote:
+        image:voting-app
+        ports:
+            -5000:80
+        depends_on:
+            -redis
+        network:
+            -front-end
+            -back-end
+    result:
+        image:result-app
+        ports:
+            -5001:80
+        network:
+            -front-end
+            -back-end
+    worker:
+        image:worker
+
+networks:
+    front-end:
+    back-end:

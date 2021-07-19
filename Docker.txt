@@ -1,0 +1,232 @@
+# ssh vm using Public Ip
+ssh dockervm-adm@20.143.222.107
+# check version of Ubuntu
+cat /etc/*release*
+# Uninstall old versions
+sudo apt-get remove docker docker-engine docker.io containerd runc
+# Set up the repository (optional)
+sudo apt-get update
+sudo apt-get install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+
+# I am using script to install docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# To check the version
+sudo docker version
+
+# run the first container to check 
+sudo docker run docker/whalesay cowsay hello world this is test container
+
+# Commands 
+docker run ngnix  #this pulls the ngnix from doekcr hub and if already exist it will create container using the same.
+docker ps # this will  give runnign conatiner info use -a flag for all conatiner <sudo docker ps -a>
+docker stop # this use to stop the running conoatiner <sudo docker stop a81bab2ee1c0>
+docker rm # to remove container (stopped)  or <docker rm bee 2ae>
+docker images # to list all images
+docker rmi # to reomve the imaage
+docker run ubuntu sleep 5
+docker exec angry_galois cat /etc/hosts # to run command on container <angry_galois> is the conatiner name
+docker run -d ubuntu sleep 200 # to run the conatiner in backend
+docker attach angry_galois # this will attach to container
+docker run -it centos bash # this will start centos and enters in its bash -i is for interactive and -t for termainal
+
+# to remove all in one go
+docker stop $(docker ps -aq)
+docker rm $(docker ps -aq)
+docker rmi $(docker images -q)
+
+
+docker run redis:4.0 # to run the container using particular tag image
+docker run -p 80:5000 kodekloud/simple-webapp # port mapping 80 is vm and 50000 of container port
+docker run -v /opt/datadir:/var/lib/mysql mysql  # this will map host volume to conotainer volume
+docker inspect <conatiner name> # to list all information of container
+docker logs <container name> # to list logs of a cotainer
+
+docker run -p 8080:8080 jenkins:2.60.3 # this will map the port and run jenkins
+docker run -p 8080:8080 -p 50000:50000 -v /home/dockervm-adm:/var/jenkins_home jenkins:2.60.3  # this will mount the jenkins volume to /home/dockervm-adm and 8080 prot to 8080
+docker run --name testjenkins -p 8080:8080 -p 50000:50000 -v /home/dockervm-adm:/var/jenkins_home jenkins:2.60.3 # create container with given name
+docker run --name jenkinroot -u root -p 8080:8080 -p 50000:50000 -v /home/dockervm-adm:/var/jenkins_home jenkins:2.60.3 # run container with given name and given user
+
+
+####### Docker file creation ###########
+
+FROM Ubuntu     # Must start with from and this is used to define start from a base OS or another image
+RUN apt-get update && apt-get -y install python   # install all dependencies
+RUN pip install flask flask-mysql
+COPY . /opt/source-code        # Copy files from local system to docker conatiner
+ENTRYPOINT FLASK_APP=/opt/source-code/app.py flask run   # Allow us to run image as a conatiner
+
+
+# This is created as Layerd Arch hence first command created one layer then other creates other layer on it.
+# Manual Process
+
+docker run -it ubuntu bash
+apt-get update
+apt-get install -y python
+apt-get install python pip
+pip install flask
+cat > /opt/app.py
+apt-get install vim # for vim installation :q to quit :q! without saving :wq!  to write and quit even if file has only read permission (if file does not have write permission: force write)
+### Put this in app.py ###
+import os
+from flask import Flask
+app = Flask(__name__)
+
+@app.route("/")
+def main():
+    return "Welcome!"
+
+@app.route('/how are you')
+def hello():
+    return 'I am good, how about you?'
+
+if __name__ == "__main__":
+    app.run()
+    #app.run(host="0.0.0.0", port=8080)
+### END ###
+FLASK_APP=app.py flask run --host=0.0.0.0
+
+
+docker build first.dockerfile
+
+docker login  # to login dokcer hub
+docker push <repo_name/image_name>  # to push own images to Docker hub in our repo
+
+
+In command CMD the parameter is hardcoded whereas in Entrypoint the parameter is appended to it
+
+
+#### Eaxmple ####
+FROM ubuntu
+ENTRYPOINT ["sleep"]
+CMD ["5"]
+
+docker run ubuntu-sleeper 10  # this will replace the 5 with 10 seconds
+docker run ubuntu-sleeper  # this will use 5 as we have not defined anything run time however we have defined in code so it would pick 5 from there. However if we have not defined the CMD then it will fail with eroor.
+
+
+
+docker run -d --name=redis redis
+docker run -d --name=db postgres
+docker run -d --name=vote -p 5000:80 voting-app
+docker run -d --name=result -p 5001:80 result-app
+docker run -d --name=worker worker
+
+Now few contanier has dependencies on other ones so this can be define through links,
+
+docker run -d --name=redis redis
+docker run -d --name=db postgres
+docker run -d --name=vote -p 5000:80 --link redis:redis voting-app  # this will link redis container to it
+docker run -d --name=result -p 5001:80 --link db:db result-app
+docker run -d --name=worker --link db:db --link redis:redis worker
+
+# docker compose has 3 versions available
+# to configure the above using both docker compose vrsions please see docker-compose.yaml file
+# in version 1 docker compose attaches all the container it runs to default bridge netowrk and then use links to communicate
+# in version 2 docker compose automatically creates a dedicate bridge network and then attaches all the conatiner to that bridge network. All container can able to communicate using each other service name so we need not to define links in it.
+# version 3 comes with Docker swarm support
+
+
+
+# LEARN Deploying voting app 
+git clone <url>
+cd example-voting-app/
+cd vote/
+docker build . -t voting-app   # this will tag the conatiner with voting-app name and create it using dockerfile
+docker run -p 5000:80 voting-app  # this will run a container using voting-app image and map host 5000 port to conatiner port 80
+docker run -d --name redis redis # creating redis container and runs it in background (-d) with the name redis
+docker run -d -p 5000:80 --link redis:redis voting-app  # now just trying to check if we can run this first two layer of app
+docker run -d --name=db -e POSTGRES_PASSWORD=postgres postgres:9.4   # running the postgres with db name in background. This password stored in the docker-compose yaml file of the result-app and I can see when it tries to connect to postgres db it will use username and password "postgres"
+cd ..; cd worker
+docker build . -t worker-app   # time to build worker image
+docker run -d --link redis:redis --link db:db worker-app
+cd ..; cd result
+docker build . -t result-app
+docker run -d -p 5001:80 --link db:db result-app
+
+
+
+# Correct sequence that has used
+docker build . -t voting-app
+docker run -d --name redis redis
+docker run -d -p 5000:80 --link redis:redis voting-app
+docker run -d --name=db -e POSTGRES_PASSWORD=postgres postgres:9.4
+cd ..; cd worker
+docker build . -t worker-app
+docker run -d --link redis:redis --link db:db worker-app
+cd ..; cd result
+docker build . -t result-app
+docker run -d -p 5001:80 --link db:db result-app
+
+
+# Some other commands that I used in troubleshooting
+docker run --name mydb --entrypoint /bin/sh -itd postgres:9.4
+docker run --name db -e POSTGRES_PASSWORD=mypassword -d postgres:9.4
+
+# output of my docker ps -a command
+
+$ docker ps -a
+CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS          PORTS                                   NAMES
+899368ed7e9f   result-app     "docker-entrypoint.s…"   51 seconds ago   Up 49 seconds   0.0.0.0:5001->80/tcp, :::5001->80/tcp   admiring_perlman   
+40cea621689d   worker-app     "dotnet Worker.dll"      2 minutes ago    Up 2 minutes                                            laughing_fermat    
+842ca38fddf5   postgres:9.4   "docker-entrypoint.s…"   4 minutes ago    Up 4 minutes    5432/tcp                                db
+0310d46c01b8   voting-app     "gunicorn app:app -b…"   5 minutes ago    Up 5 minutes    0.0.0.0:5000->80/tcp, :::5000->80/tcp   magical_brahmagupta
+1f39e8aeb9ed   redis          "docker-entrypoint.s…"   5 minutes ago    Up 5 minutes    6379/tcp                                redis
+
+# output of my docker images command
+
+$ docker images
+REPOSITORY                              TAG        IMAGE ID       CREATED         SIZE 
+result-app                              latest     7998e01da4e8   2 minutes ago   159MB
+worker-app                              latest     d73db5fbd925   4 minutes ago   193MB
+<none>                                  <none>     b6d2e7c45c1a   4 minutes ago   749MB
+voting-app                              latest     ebde35cfed7d   8 minutes ago   131MB
+mcr.microsoft.com/dotnet/core/runtime   3.1        e69ab40e210a   5 days ago      190MB
+mcr.microsoft.com/dotnet/core/sdk       3.1        5dbfe879d2f7   5 days ago      710MB
+python                                  3.9-slim   c2f204720fdd   2 weeks ago     115MB
+redis                                   latest     08502081bff6   3 weeks ago     105MB
+node                                    10-slim    6fbcbbb5c603   3 months ago    134MB
+postgres                                9.4        ed5a45034282   17 months ago   251MB
+
+
+
+# Installation of Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Time to create above voting app using Docker compose
+vim docker-compose.yml   # create docker compose file paste the content of docker-compose_voting.yml
+docker-compose up # this will create all the conntainer with the diorectory name in prefix
+
+# Docker registry (docker.io) is a storage and distribution system for named Docker images.
+# Other cloud provider has their own registry that can be used likewise (Azure has azurecr.io and google has gcr.io)
+# to login into docker registry we use docker login however I am using Azure one and describing the process below:-
+
+Connect-AzAccount
+Connect-AzContainerRegistry -Name dockerlearn
+docker login dockerlearn.azurecr.io
+docker pull mcr.microsoft.com/oss/nginx/nginx:1.15.5-alpine
+docker pull mcr.microsoft.com/oss/nginx/nginx:1.15.5-alpine  # This example pulls an image from Microsoft Container Registry
+docker run -it --rm -p 8080:80 mcr.microsoft.com/oss/nginx/nginx:1.15.5-alpine   # command to start a local instance of the Nginx container interactively (-it) on port 8080. The --rm argument specifies that the container should be removed when you stop it.
+docker tag mcr.microsoft.com/oss/nginx/nginx:1.15.5-alpine dockerlearn.azurecr.io/samples/nginx  # This example specifies the samples namespace to avoid clutter in the root of the registry.
+docker push dockerlearn.azurecr.io/samples/nginx   # push image to registry
+docker pull dockerlearn.azurecr.io/samples/nginx   # pull image to registry
+docker rmi dockerlearn.azurecr.io/samples/nginx    # remove the image
+
+# Remving image using powershell
+Remove-AzContainerRegistryRepository -RegistryName dockerlearn -Name samples/nginx
+Remove-AzContainerRegistryManifest -RegistryName dockerlearn -RepositoryName samples/nginx -Tag latest
+
+
+
+
+
+# some important link to study
+# for yaml : https://kodekloud.com/courses/json-path-quiz/
+# https://www.tutorialworks.com/why-containers-stop/
