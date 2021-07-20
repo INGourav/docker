@@ -52,3 +52,70 @@ System always starts with one process ID and when we create a container it will 
 |     |      CPU      |              |   Memory       |                       |
 |     |_______________|              |________________|                       |                                  |
 |-----------------------------------------------------------------------------|
+
+
+By default there is no limit that a conatiner can utilize how much of resources of a underline host.
+Docker uses Cgroup to restrict these usage and this can be done at the time of container creation.
+docker run --cpus=.5 ubuntu   # this will ensure that container will not consume more then 50% cpu of host at any time
+docker run --memory=100m ubuntu
+
+To list all the process running in a conatiner we use
+docker exec <container_id> ps -eaf   # eaf is used to list all the process
+ps -eaf | grep  <process_name>   # to check information of the process is running on host
+
+Docker Storage : -
+/var/lib/Docker   # this is the default diorectory of docker
+    aufs
+    containers
+    image
+    volumes
+
+We can create our own volume and attach it to container at the time of container creation. As the lifecycle of docker volume is associated to it so this is the way to prevent data loss in case of conatiner deletion/stop.
+
+docker volume create data_volume_1   # this will create a diorectory in volumes.
+docker run -v data_volume_1:/var/lib/mysql mysql  # this will attach custom volume to the conatiner.
+docker run -v data_volume_2:/var/lib/mysql mysql  # here we havenot created a volume 2 diorectory however docker will automatically create it.
+docker run -v /var/lib/data:var/lib/mysql mysql   # this will not create volume inside volume folder as we are givinng fully qualified diorectory name and this is know BIND mounting
+docker run --mount type=bind,source=/home/dockervm-adm/data,target=/var/lib/mysql mysql  # new way to use it -v is old skool method
+
+
+storage driver used by docker, the selection of depends on underline host OS.
+aufs
+zfs
+btrfs
+device mapper
+overlay
+overlay2
+
+docker info | more  # this will give output about storage driver
+
+######### Snip of output  #########
+#    Server Version: 20.10.7      #
+#   Storage Driver: overlay2      #
+######### Snip of output  #########
+
+
+ls -l /var/lib/docker/aufs/ or ls -l /var/lib/docker/overlay2/   # here docker stores all the scripts and file of an image
+docker history <conatiner_id>     # this will populate all the setps thse were performed for its creation
+
+docker system df  # this will show us stoarge consumption by images, conatiner, local volume, and build cache
+
+
+
+Docker Network : -
+There are 3 network created by default Brideg (172.17.0.1), Host, and None
+By default conatiners associated to bridge network and to associate with othet network we have to define this in command in run time.
+docker run centos --network none
+docker network create --driver bridge --subnet 182.18.0.0/16 custom-isolated-net  # create a new network
+docker network ls         # to list all the created network
+docker network connect custom-isolated-net fan_boy    # Connect a running container to a network
+docker network rm dc21eb1875ca   # to delete the gievn network
+docker network prune  OR  docker network prune -f  # to remove all unsed network
+
+
+
+Docker has a built-in DNS server that runs on 172.0.0.11
+
+
+Some links
+https://docs.docker.com/config/containers/resource_constraints/
